@@ -129,10 +129,10 @@ def _key_to_nwb_path(key):
 
 
 # ---------------------------------------------------------------------------
-# Nwb2Temporaldata class
+# Nwb2Brainset class
 # ---------------------------------------------------------------------------
 
-class Nwb2Temporaldata:
+class Nwb2Brainset:
     """Converts an NWB file to temporaldata objects for use in torch_brain.
 
     Subclass and override any ``convert_*`` method to customise how a specific
@@ -153,14 +153,14 @@ class Nwb2Temporaldata:
 
     >>> from pynwb import NWBHDF5IO
     >>> io = NWBHDF5IO("recording.nwb", "r")
-    >>> converter = Nwb2Temporaldata(io.read())
+    >>> converter = Nwb2Brainset(io.read())
     >>> converter.check()
     >>> data = converter.load(include=["units", "acquisition__LFP"])
     >>> io.close()
 
     From file with automatic cleanup:
 
-    >>> with Nwb2Temporaldata.from_file("recording.nwb") as converter:
+    >>> with Nwb2Brainset.from_file("recording.nwb") as converter:
     ...     data = converter.load()
 
     Naming scheme for include/exclude keys
@@ -202,7 +202,7 @@ class Nwb2Temporaldata:
 
         Use as a context manager to ensure the file is closed after conversion:
 
-        >>> with Nwb2Temporaldata.from_file("recording.nwb") as converter:
+        >>> with Nwb2Brainset.from_file("recording.nwb") as converter:
         ...     data = converter.load()
         """
         from pynwb import NWBHDF5IO
