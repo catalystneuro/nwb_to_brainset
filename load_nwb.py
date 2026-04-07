@@ -27,6 +27,7 @@ from brainsets.taxonomy import Sex, Species
 # Lazy-loading timeseries subclasses
 # ---------------------------------------------------------------------------
 
+
 class _LazyH5Mixin:
     """Mixin that allows h5py.Dataset to be stored in ArrayDict-based objects.
 
@@ -46,9 +47,9 @@ class _LazyH5Mixin:
                     f"First-dimension mismatch: {name} has {value.shape[0]}, "
                     f"existing attributes have {first_dim}."
                 )
-            object.__setattr__(self, name, value)   # bypass numpy-only check
+            object.__setattr__(self, name, value)  # bypass numpy-only check
         else:
-            super().__setattr__(name, value)        # normal path for numpy / private
+            super().__setattr__(name, value)  # normal path for numpy / private
 
     def __getattribute__(self, name):
         # Load h5py.Dataset → numpy transparently on first access
@@ -76,17 +77,20 @@ class _LazyH5Mixin:
 
 class LazyIrregularTimeSeries(_LazyH5Mixin, IrregularTimeSeries):
     """IrregularTimeSeries with lazy h5py.Dataset support for data fields."""
+
     pass
 
 
 class LazyRegularTimeSeries(_LazyH5Mixin, RegularTimeSeries):
     """RegularTimeSeries with lazy h5py.Dataset support for data fields."""
+
     pass
 
 
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _is_scalar_column(series):
     """Return True if a pandas Series contains only plain scalars (safe for ArrayDict)."""
@@ -100,10 +104,10 @@ def _is_scalar_column(series):
     return False
 
 
-
 # ---------------------------------------------------------------------------
 # NWB inspection helper
 # ---------------------------------------------------------------------------
+
 
 def _fmt_cols(cols, max_show=8):
     shown = list(cols[:max_show])
@@ -131,6 +135,7 @@ def _key_to_nwb_path(key):
 # ---------------------------------------------------------------------------
 # Nwb2Brainset class
 # ---------------------------------------------------------------------------
+
 
 class Nwb2Brainset:
     """Converts an NWB file to temporaldata objects for use in torch_brain.
@@ -185,7 +190,12 @@ class Nwb2Brainset:
         pynwb.epoch.TimeIntervals: "convert_interval",
     }
 
-    def __init__(self, nwbfile, lazy_loading: bool = True, brainset_description: Optional[dict] = None):
+    def __init__(
+        self,
+        nwbfile,
+        lazy_loading: bool = True,
+        brainset_description: Optional[dict] = None,
+    ):
         self.nwbfile = nwbfile
         self.lazy_loading = lazy_loading
         self.brainset_description = brainset_description or {}
@@ -206,6 +216,7 @@ class Nwb2Brainset:
         ...     data = converter.load()
         """
         from pynwb import NWBHDF5IO
+
         io = NWBHDF5IO(path, "r")
         instance = cls(io.read(), lazy_loading=lazy_loading, **kwargs)
         instance._io = io
@@ -260,7 +271,9 @@ class Nwb2Brainset:
             self._collect_objects(obj, f"acquisition__{name}", objects)
         for mod_name, module in (self.nwbfile.processing or {}).items():
             for iface_name, iface in module.data_interfaces.items():
-                self._collect_objects(iface, f"processing__{mod_name}__{iface_name}", objects)
+                self._collect_objects(
+                    iface, f"processing__{mod_name}__{iface_name}", objects
+                )
         return objects
 
     # --- Metadata extraction (overridable) ---
@@ -353,8 +366,16 @@ class Nwb2Brainset:
             spike_timestamps_list.append(spike_train)
             spike_unit_index_list.append(np.full(len(spike_train), i, dtype=np.int64))
 
-        spike_timestamps = np.concatenate(spike_timestamps_list) if n_units else np.array([], dtype=np.float64)
-        spike_unit_index = np.concatenate(spike_unit_index_list) if n_units else np.array([], dtype=np.int64)
+        spike_timestamps = (
+            np.concatenate(spike_timestamps_list)
+            if n_units
+            else np.array([], dtype=np.float64)
+        )
+        spike_unit_index = (
+            np.concatenate(spike_unit_index_list)
+            if n_units
+            else np.array([], dtype=np.int64)
+        )
 
         if len(spike_timestamps) > 0:
             spikes = IrregularTimeSeries(
@@ -367,10 +388,14 @@ class Nwb2Brainset:
             spikes = None
 
         _SKIP = {
-            "spike_times", "spike_times_index",
-            "obs_intervals", "obs_intervals_index",
-            "electrodes", "electrodes_index",
-            "waveform_mean", "waveform_sd",
+            "spike_times",
+            "spike_times_index",
+            "obs_intervals",
+            "obs_intervals_index",
+            "electrodes",
+            "electrodes_index",
+            "waveform_mean",
+            "waveform_sd",
         }
         metainfo = {
             "id": unit_ids,
@@ -416,8 +441,10 @@ class Nwb2Brainset:
         else:
             field_name = "data"
 
-        ts_cls_irreg = LazyIrregularTimeSeries if self.lazy_loading else IrregularTimeSeries
-        ts_cls_reg   = LazyRegularTimeSeries   if self.lazy_loading else RegularTimeSeries
+        ts_cls_irreg = (
+            LazyIrregularTimeSeries if self.lazy_loading else IrregularTimeSeries
+        )
+        ts_cls_reg = LazyRegularTimeSeries if self.lazy_loading else RegularTimeSeries
 
         if obj.timestamps is not None:
             t = np.asarray(obj.timestamps)
@@ -437,7 +464,9 @@ class Nwb2Brainset:
                 ),
             )
 
-        logging.warning(f"TimeSeries '{obj.name}' has neither timestamps nor rate — skipping")
+        logging.warning(
+            f"TimeSeries '{obj.name}' has neither timestamps nor rate — skipping"
+        )
         return None
 
     def convert_interval(self, obj):
@@ -527,7 +556,9 @@ class Nwb2Brainset:
 
             converter = self.dispatch(obj, key=key)
             if converter is None:
-                logging.warning(f"No converter for '{key}' ({type(obj).__name__}) — skipping")
+                logging.warning(
+                    f"No converter for '{key}' ({type(obj).__name__}) — skipping"
+                )
                 continue
 
             try:
@@ -537,7 +568,7 @@ class Nwb2Brainset:
                 continue
 
             # convert_units yields multiple items
-            if hasattr(result, '__next__'):
+            if hasattr(result, "__next__"):
                 for sub_key, sub_val in result:
                     converted[sub_key] = sub_val
             elif result is not None:
@@ -582,18 +613,22 @@ class Nwb2Brainset:
             self.data.to_hdf5(f, serialize_fn_map=serialize_fn_map)
         logging.info(f"Saved to {path}")
 
-    def check(self) -> None:
-        """Print a formatted summary of all convertible objects in the NWB file.
+    def check(self) -> list:
+        """Print a formatted summary and return structured inspection data.
 
         Keys shown match the naming scheme used by load(include=..., exclude=...).
+
+        Returns
+        -------
+        list[dict]
+            Each dict contains ``key``, ``neurodata_type``, ``target_type``,
+            plus type-specific fields (``n_units``, ``n_spikes``, ``columns``,
+            ``n_rows``, ``shape``, ``unit``, ``description``, ``sampling_rate``,
+            ``duration``).
         """
         SEP = "=" * 65
         objects = self.find_objects()
-
-        spiking = []
-        intervals = []
-        regular = []
-        irregular = []
+        results = []
 
         for key, obj in objects.items():
             try:
@@ -602,58 +637,108 @@ class Nwb2Brainset:
                     spike_trains = obj.spike_times_index[:]
                     n_spikes = sum(len(st) for st in spike_trains)
                     cols = [c for c in obj.colnames if c != "spike_times"]
-                    spiking.append({"key": key, "n_units": n_units, "n_spikes": n_spikes, "columns": cols})
+                    results.append(
+                        {
+                            "key": key,
+                            "nwb_path": _key_to_nwb_path(key),
+                            "neurodata_type": "Units",
+                            "target_type": "ArrayDict",
+                            "n_units": n_units,
+                            "n_spikes": n_spikes,
+                            "columns": cols,
+                        }
+                    )
+                    results.append(
+                        {
+                            "key": "spikes",
+                            "nwb_path": _key_to_nwb_path(key),
+                            "neurodata_type": "Units",
+                            "target_type": "IrregularTimeSeries",
+                            "n_units": n_units,
+                            "n_spikes": n_spikes,
+                        }
+                    )
 
                 elif isinstance(obj, pynwb.epoch.TimeIntervals):
                     df = obj.to_dataframe()
-                    intervals.append({"key": key, "n_rows": len(df), "columns": list(df.columns)})
+                    results.append(
+                        {
+                            "key": key,
+                            "nwb_path": _key_to_nwb_path(key),
+                            "neurodata_type": "TimeIntervals",
+                            "target_type": "Interval",
+                            "n_rows": len(df),
+                            "columns": list(df.columns),
+                        }
+                    )
 
                 elif isinstance(obj, pynwb.TimeSeries):
+                    neurodata_type = type(obj).__name__
                     shape = obj.data.shape if hasattr(obj.data, "shape") else ("?",)
                     unit = getattr(obj, "unit", None) or "?"
                     desc = (getattr(obj, "description", "") or "").strip()
                     generic = {"no description", "no comments", ""}
                     desc_str = desc[:60] if desc.lower() not in generic else ""
-                    entry = {"key": key, "shape": shape, "unit": unit, "description": desc_str}
+                    entry = {
+                        "key": key,
+                        "nwb_path": _key_to_nwb_path(key),
+                        "neurodata_type": neurodata_type,
+                        "shape": shape,
+                        "unit": unit,
+                        "description": desc_str,
+                    }
 
                     rate = getattr(obj, "rate", None)
                     if rate is not None:
+                        entry["target_type"] = "RegularTimeSeries"
                         entry["sampling_rate"] = rate
-                        regular.append(entry)
                     elif obj.timestamps is not None:
+                        entry["target_type"] = "IrregularTimeSeries"
                         t0, t1 = float(obj.timestamps[0]), float(obj.timestamps[-1])
                         entry["duration"] = t1 - t0
-                        irregular.append(entry)
+                    else:
+                        continue
+                    results.append(entry)
 
             except Exception as e:
                 logging.warning(f"check: could not inspect '{key}': {e}")
 
-        # Print
+        # --- Print ---
+        def _entries(target_type):
+            return [r for r in results if r["target_type"] == target_type]
+
         print(SEP)
         print(" NWB File Contents")
         print(SEP)
 
+        spiking = [
+            r
+            for r in results
+            if r["neurodata_type"] == "Units" and r["target_type"] == "ArrayDict"
+        ]
         print("\n[Spiking Data]")
         if spiking:
             for s in spiking:
                 print(f"  {s['key']}  ({_key_to_nwb_path(s['key'])})")
                 print(f"    n_units  : {s['n_units']:,}")
                 print(f"    n_spikes : {s['n_spikes']:,}")
-                if s["columns"]:
+                if s.get("columns"):
                     print(f"    columns  : {_fmt_cols(s['columns'])}")
         else:
             print("  (none found)")
 
+        intervals = _entries("Interval")
         print("\n[TimeIntervals]")
         if intervals:
             for iv in intervals:
                 print(f"  {iv['key']}  ({_key_to_nwb_path(iv['key'])})")
                 print(f"    n_rows   : {iv['n_rows']:,}")
-                if iv["columns"]:
+                if iv.get("columns"):
                     print(f"    columns  : {_fmt_cols(iv['columns'])}")
         else:
             print("  (none found)")
 
+        regular = _entries("RegularTimeSeries")
         print("\n[Regular TimeSeries]")
         if regular:
             for ts in regular:
@@ -661,11 +746,12 @@ class Nwb2Brainset:
                 print(f"    rate     : {ts['sampling_rate']} Hz")
                 print(f"    shape    : {ts['shape']}")
                 print(f"    unit     : {ts['unit']}")
-                if ts["description"]:
+                if ts.get("description"):
                     print(f"    desc     : {ts['description']}")
         else:
             print("  (none found)")
 
+        irregular = [r for r in _entries("IrregularTimeSeries") if "duration" in r]
         print("\n[Irregular TimeSeries]")
         if irregular:
             for ts in irregular:
@@ -673,9 +759,11 @@ class Nwb2Brainset:
                 print(f"    duration : {ts['duration']:.2f} s")
                 print(f"    shape    : {ts['shape']}")
                 print(f"    unit     : {ts['unit']}")
-                if ts["description"]:
+                if ts.get("description"):
                     print(f"    desc     : {ts['description']}")
         else:
             print("  (none found)")
 
         print(f"\n{SEP}")
+
+        return results
