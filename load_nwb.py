@@ -465,9 +465,9 @@ class Nwb2Brainset:
     def convert_timeseries(self, obj):
         """Convert a pynwb.TimeSeries → IrregularTimeSeries or RegularTimeSeries.
 
-        When ``lazy_loading=True``, data is kept as an h5py.Dataset reference and
-        only loaded into memory on first attribute access (e.g. at write time).
-        Timestamps are always loaded eagerly.
+        When ``lazy_loading=True``, both data and timestamps are kept as
+        h5py.Dataset references and only loaded into memory on first attribute
+        access (e.g. at write time or slicing).
         """
         d = obj.data if self.lazy_loading else obj.data[:]
 
@@ -482,8 +482,17 @@ class Nwb2Brainset:
         ts_cls_reg = LazyRegularTimeSeries if self.lazy_loading else RegularTimeSeries
 
         if obj.timestamps is not None:
-            t = np.asarray(obj.timestamps)
-            return ts_cls_irreg(timestamps=t, **{field_name: d}, domain="auto")
+            if self.lazy_loading:
+                t = obj.timestamps  # keep as h5py.Dataset
+                # Compute domain from first/last without loading the full array
+                domain = Interval(
+                    start=np.array([float(t[0])]),
+                    end=np.array([float(t[-1])]),
+                )
+            else:
+                t = np.asarray(obj.timestamps)
+                domain = "auto"
+            return ts_cls_irreg(timestamps=t, **{field_name: d}, domain=domain)
 
         rate = getattr(obj, "rate", None)
         if rate is not None:
