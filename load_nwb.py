@@ -622,8 +622,8 @@ class Nwb2Brainset:
         -------
         list[dict]
             Each dict contains ``key``, ``neurodata_type``, ``target_type``,
-            plus type-specific fields (``n_units``, ``n_spikes``, ``columns``,
-            ``n_rows``, ``shape``, ``unit``, ``description``, ``sampling_rate``,
+            plus type-specific fields (``n_units``, ``columns``, ``n_rows``,
+            ``shape``, ``unit``, ``description``, ``sampling_rate``,
             ``duration``).
         """
         SEP = "=" * 65
@@ -634,8 +634,6 @@ class Nwb2Brainset:
             try:
                 if isinstance(obj, pynwb.misc.Units):
                     n_units = len(obj)
-                    spike_trains = obj.spike_times_index[:]
-                    n_spikes = sum(len(st) for st in spike_trains)
                     cols = [c for c in obj.colnames if c != "spike_times"]
                     results.append(
                         {
@@ -644,7 +642,6 @@ class Nwb2Brainset:
                             "neurodata_type": "Units",
                             "target_type": "ArrayDict",
                             "n_units": n_units,
-                            "n_spikes": n_spikes,
                             "columns": cols,
                         }
                     )
@@ -655,7 +652,6 @@ class Nwb2Brainset:
                             "neurodata_type": "Units",
                             "target_type": "IrregularTimeSeries",
                             "n_units": n_units,
-                            "n_spikes": n_spikes,
                         }
                     )
 
@@ -721,7 +717,6 @@ class Nwb2Brainset:
             for s in spiking:
                 print(f"  {s['key']}  ({_key_to_nwb_path(s['key'])})")
                 print(f"    n_units  : {s['n_units']:,}")
-                print(f"    n_spikes : {s['n_spikes']:,}")
                 if s.get("columns"):
                     print(f"    columns  : {_fmt_cols(s['columns'])}")
         else:
