@@ -656,15 +656,14 @@ class Nwb2Brainset:
                     )
 
                 elif isinstance(obj, pynwb.epoch.TimeIntervals):
-                    df = obj.to_dataframe()
                     results.append(
                         {
                             "key": key,
                             "nwb_path": _key_to_nwb_path(key),
                             "neurodata_type": "TimeIntervals",
                             "target_type": "Interval",
-                            "n_rows": len(df),
-                            "columns": list(df.columns),
+                            "n_rows": len(obj),
+                            "columns": list(obj.colnames),
                         }
                     )
 
