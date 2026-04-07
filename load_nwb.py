@@ -133,6 +133,41 @@ def _key_to_nwb_path(key):
 
 
 # ---------------------------------------------------------------------------
+# DANDI helper
+# ---------------------------------------------------------------------------
+
+
+def read_from_dandi(asset_url: str, local_cache: bool = True):
+    """Open an NWB file from DANDI archive and return a pynwb NWBFile.
+
+    Parameters
+    ----------
+    asset_url : str
+        A DANDI asset URL, e.g.
+        ``https://api.dandiarchive.org/api/dandisets/000409/versions/0.260309.1324/assets/b816bcd5-0cbc-4b6d-879e-0c3cdf13d8a7/``
+    local_cache : bool
+        If True (default), use a ``lindi.LocalCache`` to avoid re-downloading
+        data on repeated access.
+
+    Returns
+    -------
+    tuple[pynwb.NWBFile, pynwb.NWBHDF5IO]
+        The opened NWB file and its IO object. The caller should close the IO
+        when done, or pass the nwbfile directly to ``Nwb2Brainset``.
+    """
+    import lindi
+
+    # Extract the asset ID from the URL (last non-empty path segment)
+    asset_id = [p for p in asset_url.rstrip("/").split("/") if p][-1]
+    download_url = f"https://api.dandiarchive.org/api/assets/{asset_id}/download/"
+
+    cache = lindi.LocalCache() if local_cache else None
+    f = lindi.LindiH5pyFile.from_hdf5_file(download_url, local_cache=cache)
+    io = pynwb.NWBHDF5IO(file=f, mode="r")
+    return io.read(), io
+
+
+# ---------------------------------------------------------------------------
 # Nwb2Brainset class
 # ---------------------------------------------------------------------------
 
